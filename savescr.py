@@ -98,6 +98,7 @@ class Editor(gtk.HBox):
         self.pack_start(sw)
 
         self.comment.connect('reset-event', self.reset)
+        self.comment.connect('undo-event', self.undo)
 
         self.canvas.set_events(gtk.gdk.POINTER_MOTION_MASK
                              | gtk.gdk.BUTTON_PRESS_MASK
@@ -138,9 +139,13 @@ class Editor(gtk.HBox):
         self.__ctx.stroke()
         self.__strokes[-1].append((event.x, event.y))
 
+    def undo(self, area):
+        if self.__strokes:
+            self.__strokes.pop()
+        self.canvas.emit('expose-event', None)
+
     def reset(self, area):
         self.__strokes = []
-        self.canvas.window.clear()
         self.canvas.emit('expose-event', None)
 
     def redraw(self, ctx):
@@ -196,19 +201,24 @@ class Comment(gtk.Fixed):
         buttons[0].set_active(1)
         setcolor()
 
-        reset = gtk.Button()
-        reset.set_image(gtk.image_new_from_stock(
-                gtk.STOCK_CLEAR, gtk.ICON_SIZE_BUTTON))
-        reset.set_can_focus(0)
-        reset.set_size_request(pixels, pixels)
-        self.put(reset, 0, len(buttons) * pixels)
-        reset.connect('clicked', lambda w: self.emit('reset-event'))
+        for i in range(2):
+            btn = gtk.Button()
+            btn.set_can_focus(0)
+            btn.set_size_request(pixels, pixels)
+            self.put(btn, 0, (len(buttons) + i) * pixels)
+            btn.set_image(gtk.image_new_from_stock(
+                    [ gtk.STOCK_UNDO, gtk.STOCK_CLEAR ][i],
+                    gtk.ICON_SIZE_BUTTON))
+            btn.connect('clicked', (lambda i = i: lambda w:
+                    self.emit([ 'undo-event', 'reset-event' ][i]))())
 
     def getcolor(self):
         return self.__color
 
 gobject.type_register(Comment)
 gobject.signal_new("reset-event", Comment, gobject.SIGNAL_RUN_FIRST,
+        gobject.TYPE_NONE, ())
+gobject.signal_new("undo-event", Comment, gobject.SIGNAL_RUN_FIRST,
         gobject.TYPE_NONE, ())
 
 if __name__ == '__main__':
