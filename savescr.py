@@ -18,7 +18,7 @@
 SSTITLE   = 'Save the PNG file...'
 SSCMD     = 'import -quality 04 -border -frame png:-'
 SSCMD_ALT = 'import -quality 04 png:-'
-CMTCOLORS = 'E88390 7FC49D 8A8FB2 7FC9E8 E77FB5 FFF78C'
+CMTCOLORS = '#E88390 #7FC49D #8A8FB2 #7FC9E8 #E77FB5 #FFF78C'
 CMTALPHA  =  0.62
 
 from cStringIO import StringIO
@@ -26,14 +26,13 @@ import sys, os
 from getopt import getopt
 import pygtk
 pygtk.require20()
-import gtk, cairo
+import gtk, cairo, gobject
+import colorsys
 
 def savescr(cmd):
-    orig = os.popen(cmd).read()
-    gui = Gui(SSTITLE, StringIO(orig), os.getcwd())
+    gui = Gui(SSTITLE, StringIO(os.popen(cmd).read()), os.getcwd())
     if gui.saving():
-        with open(gui.chooser.get_filename(), 'wb') as f:
-            f.write(orig)
+        gui.editor.saveto(gui.chooser.get_filename())
 
 class Gui(object):
     def __init__(self, title, fobj, path = None):
@@ -51,7 +50,7 @@ class Gui(object):
         fter.add_mime_type('image/png')
         self.chooser.set_filter(fter)
 
-        self.editor = Editor(fobj, CMTCOLORS, CMTALPHA)
+        self.editor = Editor(fobj, CMTCOLORS.split(), CMTALPHA)
         self.chooser.remove(self.chooser.vbox)
         vpan = gtk.VPaned()
         vpan.add1(self.editor)
@@ -66,9 +65,16 @@ class Gui(object):
     def __del__(self):
         self.chooser.destroy()
 
-class Editor(gtk.ScrolledWindow):
+class Editor(gtk.HBox):
+    class Stroke(list):
+        def __init__(self, color = (0.0, 0.0, 0.0)):
+            self.color = color
+
     def __init__(self, fobj, palette, alpha = 1.0):
-        gtk.ScrolledWindow.__init__(self)
+        gtk.HBox.__init__(self)
+        self.set_spacing(5)
+        self.__strokes = []
+        self.alpha = alpha
 
         self.__sfce = cairo.ImageSurface.create_from_png(fobj)
 
@@ -76,40 +82,134 @@ class Editor(gtk.ScrolledWindow):
             ctx = area.window.cairo_create()
             ctx.set_source_surface(self.__sfce, 0, 0)
             ctx.paint()
+            self.redraw(ctx)
 
         self.canvas = gtk.DrawingArea()
         self.canvas.set_size_request(self.__sfce.get_width(),
                                      self.__sfce.get_height())
         self.canvas.connect('expose-event', expose)
 
-        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.add_with_viewport(self.canvas)
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.add_with_viewport(self.canvas)
+
+        self.comment = Comment(palette)
+        self.pack_start(self.comment, 0)
+        self.pack_start(sw)
+
+        self.comment.connect('reset-event', self.reset)
 
         self.canvas.set_events(gtk.gdk.POINTER_MOTION_MASK
                              | gtk.gdk.BUTTON_PRESS_MASK
-                             | gtk.gdk.BUTTON_RELEASE_MASK)
-        id = self.canvas.connect('motion-notify-event', self.scrollto)
+                             | gtk.gdk.BUTTON_RELEASE_MASK
+                             | gtk.gdk.ENTER_NOTIFY_MASK)
+        id = self.canvas.connect('motion-notify-event',
+                lambda *args: (self.drawto if self.comment.getcolor()
+                    else self.scrollto)(*args), sw)
         self.canvas.handler_block(id)
         self.canvas.connect('button-press-event', lambda w, e:
                 e.button == 1 and e.type == gtk.gdk.BUTTON_PRESS
-                and self.canvas.handler_unblock(id) or self.pressat(e))
+                and self.canvas.handler_unblock(id) or self.pressat(w, e))
         self.canvas.connect('button-release-event', lambda w, e:
                 e.button == 1 and e.type == gtk.gdk.BUTTON_RELEASE
                 and self.canvas.handler_block(id))
-        self.canvas.connect('realize', lambda w:
-                w.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.FLEUR)))
+        self.canvas.connect('enter-notify-event', lambda w, e:
+                w.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.PENCIL
+                    if self.comment.getcolor() else gtk.gdk.FLEUR)))
 
-    def pressat(self, event):
+    def pressat(self, area, event):
+        self.__ctx = area.window.cairo_create()
         self.__dragfrom = (event.x, event.y)
+        if self.comment.getcolor():
+            self.__strokes.append(Editor.Stroke(self.comment.getcolor()))
+            self.__strokes[-1].append(self.__dragfrom)
 
-    def scrollto(self, area, event):
-        h, v = self.get_hscrollbar(), self.get_vscrollbar()
+    def scrollto(self, area, event, w):
+        h, v = w.get_hscrollbar(), w.get_vscrollbar()
         h.set_value(h.get_value() + self.__dragfrom[0] - event.x)
         v.set_value(v.get_value() + self.__dragfrom[1] - event.y)
 
-    def getsurface(self):
-        return self.__sfce
+    def drawto(self, area, event, w):
+        r, g, b = self.comment.getcolor()
+        self.__ctx.set_source_rgba(r, g, b, self.alpha)
+        self.__ctx.move_to(self.__strokes[-1][-1][0],
+                           self.__strokes[-1][-1][1])
+        self.__ctx.line_to(event.x, event.y)
+        self.__ctx.stroke()
+        self.__strokes[-1].append((event.x, event.y))
 
+    def reset(self, area):
+        self.__strokes = []
+        self.canvas.window.clear()
+        self.canvas.emit('expose-event', None)
+
+    def redraw(self, ctx):
+        for s in self.__strokes:
+            r, g, b = s.color
+            ctx.set_source_rgba(r, g, b, self.alpha)
+            ctx.move_to(s[0][0], s[0][1])
+            for x, y in s[1:]:
+                ctx.line_to(x, y)
+            ctx.stroke()
+
+    def saveto(self, filename):
+        self.redraw(cairo.Context(self.__sfce))
+        self.__sfce.write_to_png(filename)
+
+class Comment(gtk.Fixed):
+    def __init__(self, palette):
+        gtk.Fixed.__init__(self)
+
+        buttons = [ gtk.ToggleButton() ]
+        buttons[0].set_image(gtk.image_new_from_stock(
+                gtk.STOCK_INDEX, gtk.ICON_SIZE_BUTTON))
+
+        for c in palette:
+            btn = gtk.ToggleButton('')
+            btn.child.set_markup(u'<span size="xx-large">\u2759</span>')
+            buttons.append(btn)
+            rgb = gtk.gdk.Color(c)
+            for st in [ gtk.STATE_NORMAL,
+                        gtk.STATE_ACTIVE,
+                        gtk.STATE_SELECTED ]:
+                btn.child.modify_fg(st, rgb)
+            btn.color = (rgb.red_float, rgb.green_float, rgb.blue_float)
+            h, s, v = colorsys.rgb_to_hsv(*btn.color)
+            btn.child.modify_fg(gtk.STATE_PRELIGHT,
+                    gtk.gdk.color_from_hsv(h, s, v * 1.1))
+
+        pixels = int(1.8 * self.get_screen().get_resolution() / 6)
+        
+        for i in range(len(buttons)):
+            buttons[i].set_can_focus(0)
+            buttons[i].set_size_request(pixels, pixels)
+            buttons[i].connect('released', (lambda i = i: lambda w:
+                    w.set_active(1) if not w.get_active()
+                    else [ x.set_active(0) for x in
+                           buttons[:i] + buttons[i + 1:] ]
+                    and (setcolor(buttons[i].color if i > 0 else None)))())
+            self.put(buttons[i], 0, i * pixels)
+
+        def setcolor(color = None):
+            self.__color = color
+
+        buttons[0].set_active(1)
+        setcolor()
+
+        reset = gtk.Button()
+        reset.set_image(gtk.image_new_from_stock(
+                gtk.STOCK_CLEAR, gtk.ICON_SIZE_BUTTON))
+        reset.set_can_focus(0)
+        reset.set_size_request(pixels, pixels)
+        self.put(reset, 0, len(buttons) * pixels)
+        reset.connect('clicked', lambda w: self.emit('reset-event'))
+
+    def getcolor(self):
+        return self.__color
+
+gobject.type_register(Comment)
+gobject.signal_new("reset-event", Comment, gobject.SIGNAL_RUN_FIRST,
+        gobject.TYPE_NONE, ())
 
 if __name__ == '__main__':
     cmd = SSCMD
