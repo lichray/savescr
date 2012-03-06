@@ -53,8 +53,8 @@ class Gui(object):
         self.editor = Editor(fobj, CMTCOLORS.split(), CMTALPHA)
         self.chooser.remove(self.chooser.vbox)
         vpan = gtk.VPaned()
-        vpan.add1(self.editor)
-        vpan.add2(self.chooser.vbox)
+        vpan.pack1(self.editor, 0, 0)
+        vpan.pack2(self.chooser.vbox, 0, 0)
         self.chooser.add(vpan)
         vpan.set_position(self.chooser.get_size()[1] / 2)
 
@@ -209,6 +209,7 @@ class Comment(gtk.Fixed):
                     self.emit([ 'undo-event', 'reset-event' ][i]))())
 
         self.setcolor()
+        self.set_size_request(pixels, pixels * (len(buttons) + 2))
 
     def setcolor(self, color = None):
         self.__color = color
