@@ -31,7 +31,7 @@ import gtk, cairo
 def savescr(cmd):
     orig = os.popen(cmd).read()
     gui = Gui(SSTITLE, StringIO(orig), os.getcwd())
-    if gui.run():
+    if gui.saving():
         with open(gui.chooser.get_filename(), 'wb') as f:
             f.write(orig)
 
@@ -52,11 +52,11 @@ class Gui(object):
         self.chooser.set_filter(fter)
 
         self.editor = Editor(fobj, CMTCOLORS, CMTALPHA)
-        self.editor.show_all()
         self.chooser.vbox.pack_start(self.editor)
         self.chooser.vbox.reorder_child(self.editor, 0)
 
-    def run(self):
+    def saving(self):
+        self.editor.show_all()
         return self.chooser.run() == gtk.RESPONSE_OK
 
     def __del__(self):
