@@ -109,14 +109,20 @@ class Editor(gtk.HBox):
                     else self.scrollto)(*args), sw)
         self.canvas.handler_block(id)
         self.canvas.connect('button-press-event', lambda w, e:
-                e.button == 1 and e.type == gtk.gdk.BUTTON_PRESS
-                and self.canvas.handler_unblock(id) or self.pressat(w, e))
+                self.canvas.handler_unblock(id) or self.pressat(w, e)
+                if e.button == 1 and e.type == gtk.gdk.BUTTON_PRESS
+                else endbrush(e))
         self.canvas.connect('button-release-event', lambda w, e:
                 e.button == 1 and e.type == gtk.gdk.BUTTON_RELEASE
                 and self.canvas.handler_block(id))
         self.canvas.connect('enter-notify-event', lambda w, e:
                 w.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.PENCIL
                     if self.comment.getcolor() else gtk.gdk.FLEUR)))
+
+        def endbrush(event):
+            if event.button == 3:
+                self.comment.setcolor()
+                self.canvas.emit('enter-notify-event', None)
 
     def pressat(self, area, event):
         self.__ctx = area.window.cairo_create()
@@ -165,14 +171,15 @@ class Comment(gtk.Fixed):
     def __init__(self, palette):
         gtk.Fixed.__init__(self)
 
-        buttons = [ gtk.ToggleButton() ]
-        buttons[0].set_image(gtk.image_new_from_stock(
-                gtk.STOCK_INDEX, gtk.ICON_SIZE_BUTTON))
+        pixels = int(1.8 * self.get_screen().get_resolution() / 6)
+        buttons = []
 
         for c in palette:
             btn = gtk.ToggleButton('')
-            btn.child.set_markup(u'<span size="xx-large">\u2759</span>')
+            btn.set_can_focus(0)
+            btn.set_size_request(pixels, pixels)
             buttons.append(btn)
+            btn.child.set_markup(u'<span size="xx-large">\u2759</span>')
             rgb = gtk.gdk.Color(c)
             for st in [ gtk.STATE_NORMAL,
                         gtk.STATE_ACTIVE,
@@ -183,23 +190,12 @@ class Comment(gtk.Fixed):
             btn.child.modify_fg(gtk.STATE_PRELIGHT,
                     gtk.gdk.color_from_hsv(h, s, v * 1.1))
 
-        pixels = int(1.8 * self.get_screen().get_resolution() / 6)
-        
         for i in range(len(buttons)):
-            buttons[i].set_can_focus(0)
-            buttons[i].set_size_request(pixels, pixels)
-            buttons[i].connect('released', (lambda i = i: lambda w:
-                    w.set_active(1) if not w.get_active()
-                    else [ x.set_active(0) for x in
-                           buttons[:i] + buttons[i + 1:] ]
-                    and (setcolor(buttons[i].color if i > 0 else None)))())
             self.put(buttons[i], 0, i * pixels)
-
-        def setcolor(color = None):
-            self.__color = color
-
-        buttons[0].set_active(1)
-        setcolor()
+            buttons[i].connect('released', (lambda i = i: lambda w:
+                    [ x.set_active(0) for x in buttons[:i] + buttons[i+1:] ]
+                    and self.setcolor(buttons[i].color) if w.get_active()
+                    else self.setcolor())())
 
         for i in range(2):
             btn = gtk.Button()
@@ -211,6 +207,15 @@ class Comment(gtk.Fixed):
                     gtk.ICON_SIZE_BUTTON))
             btn.connect('clicked', (lambda i = i: lambda w:
                     self.emit([ 'undo-event', 'reset-event' ][i]))())
+
+        self.setcolor()
+
+    def setcolor(self, color = None):
+        self.__color = color
+        if not color:
+            for btn in self.children():
+                if hasattr(btn, 'set_active'):
+                    btn.set_active(0)
 
     def getcolor(self):
         return self.__color
