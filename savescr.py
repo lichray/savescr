@@ -52,11 +52,15 @@ class Gui(object):
         self.chooser.set_filter(fter)
 
         self.editor = Editor(fobj, CMTCOLORS, CMTALPHA)
-        self.chooser.vbox.pack_start(self.editor)
-        self.chooser.vbox.reorder_child(self.editor, 0)
+        self.chooser.remove(self.chooser.vbox)
+        vpan = gtk.VPaned()
+        vpan.add1(self.editor)
+        vpan.add2(self.chooser.vbox)
+        self.chooser.add(vpan)
+        vpan.set_position(self.chooser.get_size()[1] / 2)
 
     def saving(self):
-        self.editor.show_all()
+        self.editor.parent.show_all()
         return self.chooser.run() == gtk.RESPONSE_OK
 
     def __del__(self):
