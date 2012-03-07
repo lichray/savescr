@@ -214,7 +214,6 @@ class Comment(gtk.Fixed):
                     self.emit([ 'undo-event', 'reset-event' ][i]))())
 
         self.setcolor()
-        self.set_size_request(pixels, pixels * (len(buttons) + 2))
 
     def setcolor(self, color = None):
         self.__color = color
