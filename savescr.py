@@ -75,6 +75,7 @@ class Editor(gtk.HBox):
         self.set_spacing(5)
         self.__strokes = []
         self.alpha = alpha
+        self.linewidth = self.get_screen().get_resolution() / 6
 
         self.__sfce = cairo.ImageSurface.create_from_png(fobj)
 
@@ -139,6 +140,7 @@ class Editor(gtk.HBox):
     def drawto(self, area, event, w):
         r, g, b = self.comment.getcolor()
         self.__ctx.set_source_rgba(r, g, b, self.alpha)
+        self.__ctx.set_line_width(self.linewidth)
         self.__ctx.move_to(self.__strokes[-1][-1][0],
                            self.__strokes[-1][-1][1])
         self.__ctx.line_to(event.x, event.y)
@@ -158,6 +160,7 @@ class Editor(gtk.HBox):
         for s in self.__strokes:
             r, g, b = s.color
             ctx.set_source_rgba(r, g, b, self.alpha)
+            ctx.set_line_width(self.linewidth)
             ctx.move_to(s[0][0], s[0][1])
             for x, y in s[1:]:
                 ctx.line_to(x, y)
