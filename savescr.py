@@ -177,11 +177,16 @@ class Comment(gtk.Fixed):
         pixels = int(1.8 * self.get_screen().get_resolution() / 6)
         buttons = []
 
-        for c in palette:
-            btn = gtk.ToggleButton('')
+        def make_button(type = gtk.Button, *args, **kwargs):
+            btn = type(*args, **kwargs)
             btn.set_can_focus(0)
             btn.set_size_request(pixels, pixels)
-            buttons.append(btn)
+            btn.set_relief(gtk.RELIEF_NONE)
+            self.put(btn, 0, len(self.children()) * pixels)
+            return btn
+
+        for c in palette:
+            btn = make_button(gtk.ToggleButton, '')
             btn.child.set_markup(u'<span size="xx-large">\u2759</span>')
             rgb = gtk.gdk.Color(c)
             for st in [ gtk.STATE_NORMAL,
@@ -192,19 +197,16 @@ class Comment(gtk.Fixed):
             h, s, v = colorsys.rgb_to_hsv(*btn.color)
             btn.child.modify_fg(gtk.STATE_PRELIGHT,
                     gtk.gdk.color_from_hsv(h, s, v * 1.1))
+            buttons.append(btn)
 
         for i in range(len(buttons)):
-            self.put(buttons[i], 0, i * pixels)
             buttons[i].connect('released', (lambda i = i: lambda w:
                     [ x.set_active(0) for x in buttons[:i] + buttons[i+1:] ]
                     and self.setcolor(buttons[i].color) if w.get_active()
                     else self.setcolor())())
 
         for i in range(2):
-            btn = gtk.Button()
-            btn.set_can_focus(0)
-            btn.set_size_request(pixels, pixels)
-            self.put(btn, 0, (len(buttons) + i) * pixels)
+            btn = make_button()
             btn.set_image(gtk.image_new_from_stock(
                     [ gtk.STOCK_UNDO, gtk.STOCK_CLEAR ][i],
                     gtk.ICON_SIZE_BUTTON))
