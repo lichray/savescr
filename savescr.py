@@ -78,6 +78,9 @@ class Editor(gtk.HBox):
         self.linewidth = self.get_screen().get_resolution() / 6
 
         self.__sfce = cairo.ImageSurface.create_from_png(fobj)
+        self.__cursor = [ gtk.gdk.Cursor(self.get_display(),
+            gtk.gdk.pixbuf_new_from_xpm_data(xpm), 0, 7)
+            for xpm in cursor_xpm ]
 
         def expose(area, event):
             ctx = area.window.cairo_create()
@@ -114,16 +117,20 @@ class Editor(gtk.HBox):
                 if e.button == 1 and e.type == gtk.gdk.BUTTON_PRESS
                 else endbrush(e))
         self.canvas.connect('button-release-event', lambda w, e:
-                e.button == 1 and e.type == gtk.gdk.BUTTON_RELEASE
-                and self.canvas.handler_block(id))
+                self.canvas.handler_block(id) or self.setcursor()
+                if e.button == 1 and e.type == gtk.gdk.BUTTON_RELEASE
+                else None)
         self.canvas.connect('enter-notify-event', lambda w, e:
-                w.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.PENCIL
-                    if self.comment.getcolor() else gtk.gdk.FLEUR)))
+                self.setcursor())
 
         def endbrush(event):
             if event.button == 3:
                 self.comment.setcolor()
-                self.canvas.emit('enter-notify-event', None)
+                self.setcursor()
+
+    def setcursor(self, n = None):
+        self.canvas.window.set_cursor(self.__cursor
+                [(2 if self.comment.getcolor() else 0) if n == None else n])
 
     def pressat(self, area, event):
         self.__ctx = area.window.cairo_create()
@@ -131,6 +138,8 @@ class Editor(gtk.HBox):
         if self.comment.getcolor():
             self.__strokes.append(Editor.Stroke(self.comment.getcolor()))
             self.__strokes[-1].append(self.__dragfrom)
+        else:
+            self.setcursor(1)
 
     def scrollto(self, area, event, w):
         h, v = w.get_hscrollbar(), w.get_vscrollbar()
@@ -234,6 +243,72 @@ gobject.signal_new("reset-event", Comment, gobject.SIGNAL_RUN_FIRST,
         gobject.TYPE_NONE, ())
 gobject.signal_new("undo-event", Comment, gobject.SIGNAL_RUN_FIRST,
         gobject.TYPE_NONE, ())
+
+cursor_xpm = [
+[
+"16 16 3 1",
+" 	c None",
+".	c #000000",
+"+	c #FFFFFF",
+"       ..       ",
+"   .. .++...    ",
+"  .++..++.++.   ",
+"  .++..++.++. . ",
+"   .++.++.++..+.",
+"   .++.++.++.++.",
+" .. .+++++++.++.",
+".++..++++++++++.",
+".+++.+++++++++. ",
+" .++++++++++++. ",
+"  .+++++++++++. ",
+"  .++++++++++.  ",
+"   .+++++++++.  ",
+"    .+++++++.   ",
+"     .++++++.   ",
+"     .++++++.   "],
+[
+"16 16 3 1",
+" 	c None",
+".	c #000000",
+"+	c #FFFFFF",
+"                ",
+"                ",
+"                ",
+"                ",
+"    .. .. ..    ",
+"   .++.++.++..  ",
+"   .++++++++.+. ",
+"   ..+++++++++. ",
+"  .+.+++++++++. ",
+"  .+++++++++++. ",
+"  .+++++++++++. ",
+"  .++++++++++.  ",
+"   .+++++++++.  ",
+"    .+++++++.   ",
+"     .++++++.   ",
+"     .++++++.   "],
+[
+"16 16 3 1",
+" 	c None",
+".	c #FFFFFF",
+"+	c #000000",
+"     .+++++.    ",
+"    .++...++.   ",
+"    .+..++.++.  ",
+"   .+.+.+++.+.  ",
+"   .+.++....+.  ",
+"  .+..+.+++.+.  ",
+"  .+.+...+.+.   ",
+" .+..+..+..+.   ",
+" .+.+...+.+.    ",
+".+.++..+..+.    ",
+".+.+...+.+.     ",
+".+++..+..+.     ",
+".+.++++.+.      ",
+".+....+++.      ",
+".+...++..       ",
+".++++..         "],
+]
 
 if __name__ == '__main__':
     cmd = SSCMD
