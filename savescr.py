@@ -83,7 +83,7 @@ class Editor(gtk.HBox):
             ctx = area.window.cairo_create()
             ctx.set_source_surface(self.__sfce, 0, 0)
             ctx.paint()
-            self.redraw(ctx)
+            self.__drawon(ctx)
 
         self.canvas = gtk.DrawingArea()
         self.canvas.set_size_request(self.__sfce.get_width(),
@@ -150,25 +150,29 @@ class Editor(gtk.HBox):
     def undo(self, area):
         if self.__strokes:
             self.__strokes.pop()
-        self.canvas.emit('expose-event', None)
+        self.redraw()
 
     def reset(self, area):
         self.__strokes = []
+        self.redraw()
+
+    def redraw(self):
         self.canvas.emit('expose-event', None)
 
-    def redraw(self, ctx):
+    def saveto(self, filename):
+        self.__drawon(cairo.Context(self.__sfce))
+        self.__sfce.write_to_png(filename)
+
+    def __drawon(self, ctx):
         for s in self.__strokes:
             r, g, b = s.color
             ctx.set_source_rgba(r, g, b, self.alpha)
             ctx.set_line_width(self.linewidth)
+            ctx.set_line_join(cairo.LINE_JOIN_BEVEL)
             ctx.move_to(s[0][0], s[0][1])
             for x, y in s[1:]:
                 ctx.line_to(x, y)
             ctx.stroke()
-
-    def saveto(self, filename):
-        self.redraw(cairo.Context(self.__sfce))
-        self.__sfce.write_to_png(filename)
 
 class Comment(gtk.Fixed):
     def __init__(self, palette):
