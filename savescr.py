@@ -117,7 +117,7 @@ class Editor(gtk.HBox):
                 if e.button == 1 and e.type == gtk.gdk.BUTTON_PRESS
                 else endbrush(e))
         self.canvas.connect('button-release-event', lambda w, e:
-                self.canvas.handler_block(id) or self.setcursor()
+                self.canvas.handler_block(id) or self.redraw()
                 if e.button == 1 and e.type == gtk.gdk.BUTTON_RELEASE
                 else None)
         self.canvas.connect('enter-notify-event', lambda w, e:
