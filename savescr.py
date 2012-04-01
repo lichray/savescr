@@ -33,7 +33,7 @@ def savescr(cmd):
         gui.editor.saveto(gui.chooser.get_filename())
 
 class Gui(object):
-    def __init__(self, title, fobj, path = None):
+    def __init__(self, title, fobj, path = ''):
         self.chooser = gtk.FileChooserDialog(title,
                 action = gtk.FILE_CHOOSER_ACTION_SAVE,
                 buttons = (gtk.STOCK_SAVE, gtk.RESPONSE_OK))
@@ -42,7 +42,7 @@ class Gui(object):
                     .load_icon("camera", 48, gtk.ICON_LOOKUP_FORCE_SVG))
         except: pass
         self.chooser.set_do_overwrite_confirmation(1)
-        self.chooser.set_current_folder(path)
+        if path: self.chooser.set_current_folder(path)
 
         self.editor = Editor(fobj, CMTCOLORS.split(), CMTALPHA)
         self.chooser.remove(self.chooser.vbox)
