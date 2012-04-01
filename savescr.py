@@ -326,7 +326,7 @@ if __name__ == '__main__':
             print '''%s: [options]...
 options:
   -n       no window frame
-  -h       display this help''' % os.path.basename(sys.argv[0])
+  -h       display this help''' % sys.argv[0]
             sys.exit(1)
         elif k == '-n':
             cmd = SSCMD_ALT
