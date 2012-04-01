@@ -13,9 +13,7 @@
 ##    documentation and/or other materials provided with the distribution.
 ##
 
-# Cairo only supports PNG
-
-SSTITLE   = 'Save the PNG file...'
+SSTITLE   = 'Save the screenshot'
 SSCMD     = 'import -quality 04 -border -frame png:-'
 SSCMD_ALT = 'import -quality 04 png:-'
 CMTCOLORS = '#E88390 #7FC49D #8A8FB2 #7FC9E8 #E77FB5 #FFF78C'
@@ -27,7 +25,7 @@ from getopt import getopt
 import pygtk
 pygtk.require20()
 import gtk, cairo, gobject
-import colorsys
+import colorsys, mimetypes
 
 def savescr(cmd):
     gui = Gui(SSTITLE, StringIO(os.popen(cmd).read()), os.getcwd())
@@ -45,10 +43,6 @@ class Gui(object):
         except: pass
         self.chooser.set_do_overwrite_confirmation(1)
         self.chooser.set_current_folder(path)
-
-        fter = gtk.FileFilter()
-        fter.add_mime_type('image/png')
-        self.chooser.set_filter(fter)
 
         self.editor = Editor(fobj, CMTCOLORS.split(), CMTALPHA)
         self.chooser.remove(self.chooser.vbox)
@@ -171,7 +165,20 @@ class Editor(gtk.HBox):
 
     def saveto(self, filename):
         self.__drawon(cairo.Context(self.__sfce))
-        self.__sfce.write_to_png(filename)
+        ft, _ = mimetypes.guess_type(filename)
+        if ft == None or ft == 'image/png':
+            self.__sfce.write_to_png(filename)
+            return
+        try:
+            import Image
+            img = Image.frombuffer("RGBA",
+                    (self.__sfce.get_width(), self.__sfce.get_height()),
+                    self.__sfce.get_data(), "raw", "BGRA", 0, 1)
+            img.convert('RGB').save(filename, quality = 90)
+        except:
+            import pipes
+            fp, _ = os.popen2('convert - ' + pipes.quote(filename))
+            self.__sfce.write_to_png(fp)
 
     def __drawon(self, ctx):
         for s in self.__strokes:
