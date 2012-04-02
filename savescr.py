@@ -321,13 +321,16 @@ cursor_xpm = [
 if __name__ == '__main__':
     cmd = SSCMD
 
-    for k, v in getopt(sys.argv[1:], 'hn')[0]:
+    for k, v in getopt(sys.argv[1:], 'c:hn')[0]:
         if k == '-h':
             print '''%s: [options]...
 options:
-  -n       no window frame
-  -h       display this help''' % sys.argv[0]
+  -c COLORS  commenting colors
+  -n         no window frame
+  -h         display this help''' % sys.argv[0]
             sys.exit(1)
+        elif k == '-c':
+            CMTCOLORS = v
         elif k == '-n':
             cmd = SSCMD_ALT
 
