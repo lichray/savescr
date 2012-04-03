@@ -14,8 +14,6 @@
 ##
 
 SSTITLE   = 'Save the screenshot'
-SSCMD     = 'import -quality 04 -border -frame png:-'
-SSCMD_ALT = 'import -quality 04 png:-'
 CMTCOLORS = '#E88390 #7FC49D #8A8FB2 #7FC9E8 #E77FB5 #FFF78C'
 CMTALPHA  =  0.62
 
@@ -319,19 +317,26 @@ cursor_xpm = [
 ]
 
 if __name__ == '__main__':
-    cmd = SSCMD
+    cmd = 'import'
+    opt = { 'quality' : '-quality 04',
+            'screen'  : '-screen',
+            'frame'   : '-frame -border' }
+    arg = 'png:-'
 
-    for k, v in getopt(sys.argv[1:], 'c:hn')[0]:
+    for k, v in getopt(sys.argv[1:], 'c:hnw')[0]:
         if k == '-h':
             print '''%s: [options]...
 options:
   -c COLORS  commenting colors
   -n         no window frame
+  -w         take image from window
   -h         display this help''' % sys.argv[0]
             sys.exit(1)
         elif k == '-c':
             CMTCOLORS = v
+        elif k == '-w':
+            del opt['screen']
         elif k == '-n':
-            cmd = SSCMD_ALT
+            del opt['frame']
 
-    savescr(cmd)
+    savescr(' '.join([cmd] + opt.values() + [arg]))
