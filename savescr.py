@@ -326,9 +326,9 @@ if __name__ == '__main__':
     for k, v in getopt(sys.argv[1:], 'c:hnw')[0]:
         if k == '-h':
             print '''%s: [options]...
-options:
-  -c COLORS  commenting colors
-  -n         no window frame
+Options:
+  -c COLORS  set commenting colors
+  -n         do not include window frame
   -w         take image from window
   -h         display this help''' % sys.argv[0]
             sys.exit(1)
