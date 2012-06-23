@@ -27,7 +27,7 @@ import colorsys, mimetypes
 def savescr(fobj):
     with fobj:
         gui = Gui(SSTITLE, fobj, os.getcwd())
-    if gui.saving():
+    if gui.saving(fobj.name):
         gui.editor.saveto(gui.chooser.get_filename())
 
 class Gui(object):
@@ -50,7 +50,8 @@ class Gui(object):
         self.chooser.add(vpan)
         vpan.set_position(self.chooser.get_size()[1] / 2)
 
-    def saving(self):
+    def saving(self, filename = ''):
+        self.chooser.set_filename(filename)
         self.editor.parent.show_all()
         return self.chooser.run() == gtk.RESPONSE_OK
 
