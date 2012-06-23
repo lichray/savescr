@@ -24,8 +24,9 @@ pygtk.require20()
 import gtk, cairo, gobject
 import colorsys, mimetypes
 
-def savescr(cmd):
-    gui = Gui(SSTITLE, os.popen(cmd), os.getcwd())
+def savescr(fobj):
+    with fobj:
+        gui = Gui(SSTITLE, fobj, os.getcwd())
     if gui.saving():
         gui.editor.saveto(gui.chooser.get_filename())
 
@@ -321,21 +322,30 @@ if __name__ == '__main__':
             'screen'  : '-screen',
             'frame'   : '-frame -border' }
     arg = 'png:-'
+    filename = ''
 
-    for k, v in getopt(sys.argv[1:], 'c:hnw')[0]:
+    for k, v in getopt(sys.argv[1:], 'c:f:hnw')[0]:
         if k == '-h':
             print '''%s: [options]...
 Options:
   -c COLORS  set commenting colors
+  -f FILE|-  read an image, not screenshot
   -n         do not include window frame
   -w         take image from window
   -h         display this help''' % sys.argv[0]
             sys.exit(1)
         elif k == '-c':
             CMTCOLORS = v
+        elif k == '-f':
+            filename = v
         elif k == '-w':
             del opt['screen']
         elif k == '-n':
             del opt['frame']
 
-    savescr(' '.join([cmd] + opt.values() + [arg]))
+    if filename:
+        fp = open(filename) if filename != '-' else sys.stdin
+    else:
+        fp = os.popen(' '.join([cmd] + opt.values() + [arg]))
+
+    savescr(fp)
