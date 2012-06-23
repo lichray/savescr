@@ -17,7 +17,6 @@ SSTITLE   = 'Save the screenshot'
 CMTCOLORS = '#E88390 #7FC49D #8A8FB2 #7FC9E8 #E77FB5 #FFF78C'
 CMTALPHA  =  0.62
 
-from cStringIO import StringIO
 import sys, os
 from getopt import getopt
 import pygtk
@@ -26,7 +25,7 @@ import gtk, cairo, gobject
 import colorsys, mimetypes
 
 def savescr(cmd):
-    gui = Gui(SSTITLE, StringIO(os.popen(cmd).read()), os.getcwd())
+    gui = Gui(SSTITLE, os.popen(cmd), os.getcwd())
     if gui.saving():
         gui.editor.saveto(gui.chooser.get_filename())
 
